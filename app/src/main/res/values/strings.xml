@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QQ SSAID 一键修改</string>
+    <string name="module_description">一键修改 QQ 的 ANDROID_ID (SSAID)，并在关于页面显示当前值</string>
+    <string name="app_description">QQ NT SSAID Hook（libxposed API 102）</string>
+</resources>
