@@ -145,13 +145,21 @@ public class MainHook extends XposedModule {
                 View decor = activity.getWindow().getDecorView();
                 if (!(decor instanceof ViewGroup)) return;
                 ViewGroup root = (ViewGroup) decor;
-                if (root.findViewWithTag(VIEW_TAG) != null) return;
+                View existing = root.findViewWithTag(VIEW_TAG);
+                String current = loadSsaid(activity.getContentResolver());
+                if (current != null && !current.isEmpty()) lastSsaid = current;
+
+                if (existing instanceof FrameLayout) {
+                    View child = ((FrameLayout) existing).getChildAt(0);
+                    if (child instanceof TextView) ((TextView) child).setText("SSAID：" + safeSsaid());
+                    return;
+                }
+
                 FrameLayout overlay = new FrameLayout(activity);
                 overlay.setTag(VIEW_TAG);
                 overlay.setClickable(false);
                 overlay.setFocusable(false);
-                String current = loadSsaid(activity.getContentResolver());
-                if (current != null && !current.isEmpty()) lastSsaid = current;
+
                 TextView tv = new TextView(activity);
                 tv.setText("SSAID：" + safeSsaid());
                 tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
@@ -159,10 +167,16 @@ public class MainHook extends XposedModule {
                 tv.setGravity(Gravity.CENTER);
                 tv.setPadding(dp(activity, 14), dp(activity, 7), dp(activity, 14), dp(activity, 7));
                 tv.setBackgroundColor(Color.argb(215, 30, 30, 30));
-                FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+
+                FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
                 lp.bottomMargin = dp(activity, 28);
                 overlay.addView(tv, lp);
-                root.addView(overlay, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                root.addView(overlay, new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
             } catch (Throwable t) {
                 log(Log.ERROR, TAG, "Failed to add QQ NT overlay", t);
             }
@@ -175,7 +189,9 @@ public class MainHook extends XposedModule {
                 View decor = activity.getWindow().getDecorView();
                 if (!(decor instanceof ViewGroup)) return;
                 View v = decor.findViewWithTag(VIEW_TAG);
-                if (v != null && v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v);
+                if (v != null && v.getParent() instanceof ViewGroup) {
+                    ((ViewGroup) v.getParent()).removeView(v);
+                }
             } catch (Throwable ignored) { }
         });
     }
@@ -205,6 +221,9 @@ public class MainHook extends XposedModule {
     }
 
     private int dp(Activity activity, int value) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, activity.getResources().getDisplayMetrics());
+        return (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                value,
+                activity.getResources().getDisplayMetrics());
     }
 }
