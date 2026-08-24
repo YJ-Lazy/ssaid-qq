@@ -145,22 +145,6 @@ Build → Build Bundle(s) / APK(s) → Build APK(s)
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## 发布建议
-
-建议 GitHub Release 使用版本标签：
-
-```text
-v1.1.0
-```
-
-Release 标题：
-
-```text
-QQSSaidHook v1.1.0
-```
-
-发布 APK 前请使用自己的签名构建 Release 版本，不要把 keystore、密码或 `keystore.properties` 提交到仓库。
-
 ## 已知限制
 
 - 只处理 Java 层 `Settings.Secure.getString()` 的 `ANDROID_ID` 获取路径。
