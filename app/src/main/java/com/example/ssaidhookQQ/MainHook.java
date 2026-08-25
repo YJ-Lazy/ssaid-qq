@@ -104,9 +104,11 @@ public class MainHook extends XposedModule {
             if (activity.isFinishing() || activity.isDestroyed()) return;
             View decor = activity.getWindow().getDecorView();
             if (decor == null) return;
-            String name = activity.getClass().getName().toLowerCase();
-            boolean classHint = name.contains("about") || name.contains("version") || name.contains("setting");
-            if (classHint || containsAboutText(decor)) addNtOverlay(activity); else removeNtOverlay(activity);
+            if (containsAboutText(decor)) {
+                addNtOverlay(activity);
+            } else {
+                removeNtOverlay(activity);
+            }
         } catch (Throwable t) {
             log(Log.WARN, TAG, "About detection failed: " + t.getMessage());
         }
@@ -117,13 +119,24 @@ public class MainHook extends XposedModule {
         Set<View> seen = new HashSet<>();
         queue.add(root);
         int scanned = 0;
+        boolean hasQqLabel = false;
+        boolean hasVersionInformation = false;
         while (!queue.isEmpty() && scanned++ < 2500) {
             View v = queue.removeFirst();
             if (v == null || !seen.add(v)) continue;
             if (v instanceof TextView) {
-                CharSequence cs = ((TextView) v).getText();
-                if (cs != null && isAboutText(cs.toString())) return true;
+                CharSequence text = ((TextView) v).getText();
+                if (isAboutText(text)) return true;
+                hasQqLabel |= isQqLabel(text);
+                hasVersionInformation |= isVersionInformation(text);
             }
+
+            CharSequence description = v.getContentDescription();
+            if (isAboutText(description)) return true;
+            hasQqLabel |= isQqLabel(description);
+            hasVersionInformation |= isVersionInformation(description);
+            if (hasQqLabel && hasVersionInformation) return true;
+
             if (v instanceof ViewGroup) {
                 ViewGroup g = (ViewGroup) v;
                 for (int i = 0; i < g.getChildCount(); i++) queue.addLast(g.getChildAt(i));
@@ -132,11 +145,29 @@ public class MainHook extends XposedModule {
         return false;
     }
 
-    private boolean isAboutText(String text) {
+    private boolean isAboutText(CharSequence text) {
         if (text == null) return false;
-        String s = text.trim().toLowerCase();
-        return s.contains("关于qq") || s.contains("about qq") || s.contains("aboutqq")
-                || s.contains("版本信息") || s.contains("version information");
+        String normalized = normalizeText(text);
+        return normalized.contains("关于qq") || normalized.contains("aboutqq");
+    }
+
+    private boolean isQqLabel(CharSequence text) {
+        if (text == null) return false;
+        String normalized = normalizeText(text);
+        return normalized.equals("qq") || normalized.contains("qq版本")
+                || normalized.contains("qqversion");
+    }
+
+    private boolean isVersionInformation(CharSequence text) {
+        if (text == null) return false;
+        String normalized = normalizeText(text);
+        return normalized.contains("版本信息")
+                || normalized.contains("versioninformation");
+    }
+
+    private String normalizeText(CharSequence text) {
+        return text.toString().trim().toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("\\s+", "");
     }
 
     private void addNtOverlay(Activity activity) {
@@ -147,7 +178,7 @@ public class MainHook extends XposedModule {
                 ViewGroup root = (ViewGroup) decor;
                 View existing = root.findViewWithTag(VIEW_TAG);
                 String current = loadSsaid(activity.getContentResolver());
-                if (current != null && !current.isEmpty()) lastSsaid = current;
+                lastSsaid = current;
 
                 if (existing instanceof FrameLayout) {
                     View child = ((FrameLayout) existing).getChildAt(0);

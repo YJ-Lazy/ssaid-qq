@@ -13,8 +13,8 @@ QQ / QQ NT 专用的 LSPosed 模块，基于 **libxposed API 102**。
 - APP 内一键生成 16 位十六进制 SSAID
 - 使用只读 `ContentProvider` 向 QQ 进程提供当前配置
 - Hook `Settings.Secure.getString(ContentResolver, String)` 的 `ANDROID_ID`
-- 针对 QQ NT，通过 Activity 生命周期 + View 文本识别「关于 QQ」页面
-- 使用 DecorView Overlay 显示当前 SSAID，不修改 QQ 原页面布局
+- 针对 QQ NT，通过 Activity 生命周期、TextView 文本及 View 无障碍描述识别「关于 QQ」页面
+- 使用独立的 DecorView 状态层显示当前 SSAID，不修改 QQ 页面原有内容控件
 
 ## 当前版本
 
@@ -81,6 +81,14 @@ com.example.ssaidhookQQ.MainHook
 app/src/main/resources/META-INF/xposed/
 ```
 
+当前 API 配置：
+
+```text
+minApiVersion=102
+targetApiVersion=102
+staticScope=true
+```
+
 ### SSAID Hook
 
 核心 Hook 点：
@@ -97,7 +105,9 @@ content://com.example.ssaidhookQQ.config/config
 
 ### QQ NT 页面状态显示
 
-当前实现不依赖固定 `AboutActivity` 类名，而是在 QQ Activity 恢复/获得焦点后扫描页面 View 文本，通过「关于QQ / About QQ / 版本信息」等特征判断页面，并在 DecorView 上添加状态 Overlay。
+当前实现不依赖固定 `AboutActivity` 类名，也不会仅凭普通设置页的 Activity 名称显示状态。QQ Activity 恢复或获得焦点后，模块扫描页面中的 `TextView` 文本与 View 的 `contentDescription`，直接匹配「关于 QQ / About QQ」，或同时匹配 QQ 标识与版本信息，再向 DecorView 添加独立状态层。
+
+状态层显示模块通过 `ContentProvider` 读取到的当前配置值；没有配置或读取失败时显示「未配置」。SSAID Hook 与状态层是两个独立部分，状态层未显示不代表 SSAID Hook 一定没有生效。
 
 ## 构建
 
@@ -117,7 +127,9 @@ app/build/outputs/apk/debug/app-debug.apk
 
 - 只处理 Java 层 `Settings.Secure.getString()` 的 `ANDROID_ID` 获取路径。
 - QQ 自身若使用其他设备标识获取路径，不属于当前 Hook 范围。
-- QQ NT UI 更新可能导致「关于 QQ」状态 Overlay 无法识别页面。
+- QQ NT UI 更新可能导致「关于 QQ」状态层无法识别页面。
+- 仅能扫描实际 View 树中的 `TextView` 文本和 `contentDescription`；未暴露这些信息的 Compose、自绘页面或其他自定义 UI 可能无法显示状态层。
+- 状态层会作为独立子 View 添加到 DecorView，不修改 QQ 页面内容控件，但仍会改变窗口根 View 层级。
 - 配置 Provider 为只读 exported Provider，第三方应用理论上也可读取当前配置值。
 
 ## License
