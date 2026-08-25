@@ -4,7 +4,7 @@ QQ / QQ NT 专用的 LSPosed 模块，基于 **libxposed API 102**。
 
 用于为 `com.tencent.mobileqq` 拦截 `Settings.Secure.ANDROID_ID`（SSAID），并在 QQ「关于」相关页面显示当前模块读取到的配置值。
 
-> 本项目仅供 Android Hook / LSPosed 学习与个人研究使用。
+> 本项目仅供 Android 兼容性学习与个人研究使用，与腾讯及 QQ 官方不存在隶属、合作或认可关系。
 
 ## 功能
 
@@ -13,8 +13,8 @@ QQ / QQ NT 专用的 LSPosed 模块，基于 **libxposed API 102**。
 - APP 内一键生成 16 位十六进制 SSAID
 - 使用只读 `ContentProvider` 向 QQ 进程提供当前配置
 - Hook `Settings.Secure.getString(ContentResolver, String)` 的 `ANDROID_ID`
-- 针对 QQ NT，通过 Activity 生命周期 + View 文本识别「关于 QQ」页面
-- 使用 DecorView Overlay 显示当前 SSAID，不修改 QQ 原页面布局
+- 针对 QQ NT，通过 Activity 生命周期、TextView 文本及 View 无障碍描述识别「关于 QQ」页面
+- 在相关页面提供独立的 SSAID 状态提示
 
 ## 当前版本
 
@@ -81,6 +81,14 @@ com.example.ssaidhookQQ.MainHook
 app/src/main/resources/META-INF/xposed/
 ```
 
+当前 API 配置：
+
+```text
+minApiVersion=102
+targetApiVersion=102
+staticScope=true
+```
+
 ### SSAID Hook
 
 核心 Hook 点：
@@ -97,7 +105,9 @@ content://com.example.ssaidhookQQ.config/config
 
 ### QQ NT 页面状态显示
 
-当前实现不依赖固定 `AboutActivity` 类名，而是在 QQ Activity 恢复/获得焦点后扫描页面 View 文本，通过「关于QQ / About QQ / 版本信息」等特征判断页面，并在 DecorView 上添加状态 Overlay。
+当前实现不依赖固定 `AboutActivity` 类名，也不会仅凭普通设置页的 Activity 名称显示提示。页面恢复或获得焦点后，通过界面文本及无障碍描述识别「关于 QQ / About QQ」或 QQ 标识与版本信息的组合，并显示相应状态提示。
+
+状态提示展示模块通过 `ContentProvider` 读取到的当前配置值；没有配置或读取失败时显示「未配置」。配置功能与页面提示相互独立，提示未显示不代表配置功能一定没有生效。
 
 ## 构建
 
@@ -117,8 +127,13 @@ app/build/outputs/apk/debug/app-debug.apk
 
 - 只处理 Java 层 `Settings.Secure.getString()` 的 `ANDROID_ID` 获取路径。
 - QQ 自身若使用其他设备标识获取路径，不属于当前 Hook 范围。
-- QQ NT UI 更新可能导致「关于 QQ」状态 Overlay 无法识别页面。
+- QQ NT 界面更新可能影响页面识别和状态提示显示。
+- 部分未提供可识别文本或无障碍描述的页面，可能无法显示状态提示。
 - 配置 Provider 为只读 exported Provider，第三方应用理论上也可读取当前配置值。
+
+## 商标与声明
+
+QQ、腾讯及相关名称、标识和商标均归各自权利人所有。本项目为独立个人研究项目，不代表相关权利人的立场，也未获得其授权、赞助或认可。
 
 ## License
 
